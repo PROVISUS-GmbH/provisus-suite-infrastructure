@@ -1,20 +1,94 @@
 name: Deploy Azure Bicep
 
-on:
+"on":
   push:
     tags:
       - 'v*'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  test-tag-trigger:
+  prepare:
     runs-on: ubuntu-latest
+
+    outputs:
+      environment: ${{ steps.detect.outputs.environment }}
+      action: ${{ steps.detect.outputs.action }}
+
+    steps:
+      - name: Detect environment and action from tag
+        id: detect
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+
+          echo "Tag ricevuto: $TAG"
+
+          if [[ "$TAG" == *"-prod-"* ]]; then
+            echo "environment=prod" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == *"-qa-"* ]]; then
+            echo "environment=qa" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == *"-dev-"* ]]; then
+            echo "environment=dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "Errore: il tag deve contenere -dev-, -qa- oppure -prod-"
+            echo "Esempi validi: v0.2.0-dev-create, v0.2.0-dev-what"
+            exit 1
+          fi
+
+          if [[ "$TAG" == *"-create" ]]; then
+            echo "action=create" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == *"-what" ]]; then
+            echo "action=what" >> "$GITHUB_OUTPUT"
+          else
+            echo "Errore: il tag deve finire con -create oppure -what"
+            echo "Esempi validi: v0.2.0-dev-create, v0.2.0-dev-what"
+            exit 1
+          fi
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: prepare
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show tag info
+      - name: Show deploy info
         run: |
           echo "Pipeline partita correttamente"
-          echo "Tag ricevuto: $GITHUB_REF_NAME"
-          echo "Ref completa: $GITHUB_REF"
+          echo "Ambiente: ${{ needs.prepare.outputs.environment }}"
+          echo "Azione: ${{ needs.prepare.outputs.action }}"
+          echo "Tag: $GITHUB_REF_NAME"
+          echo "Resource Group: ${{ vars.AZURE_RESOURCE_GROUP }}"
+          echo "Deployment Name: ${{ vars.DEPLOYMENT_NAME }}"
+          echo "Storage Account Name: ${{ vars.STORAGE_ACCOUNT_NAME }}"
+          echo "Storage Replication: ${{ vars.STORAGE_REPLICATION }}"
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What-If Storage Account
+        if: ${{ needs.prepare.outputs.action == 'what' }}
+        run: |
+          az deployment group what-if \
+            --name "${{ vars.DEPLOYMENT_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file bicep/main.bicep \
+            --parameters storageAccountName="${{ vars.STORAGE_ACCOUNT_NAME }}" \
+            --parameters skuName="${{ vars.STORAGE_REPLICATION }}"
+
+      - name: Create Storage Account
+        if: ${{ needs.prepare.outputs.action == 'create' }}
+        run: |
+          az deployment group create \
+            --name "${{ vars.DEPLOYMENT_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file bicep/main.bicep \
+            --parameters storageAccountName="${{ vars.STORAGE_ACCOUNT_NAME }}" \
+            --parameters skuName="${{ vars.STORAGE_REPLICATION }}"
