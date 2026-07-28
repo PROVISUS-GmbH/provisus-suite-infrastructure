@@ -3,7 +3,7 @@ name: Deploy Azure Bicep
 "on":
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   id-token: write
@@ -20,6 +20,7 @@ jobs:
     steps:
       - name: Detect environment and action from tag
         id: detect
+        shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
 
@@ -51,14 +52,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: prepare
 
+    # Questo rende stabile il subject OIDC usato da Azure.
+    environment:
+      name: stg
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Show deploy info
+        shell: bash
         run: |
           echo "Pipeline partita correttamente"
-          echo "Ambiente: ${{ needs.prepare.outputs.environment }}"
+          echo "Ambiente Bicep: ${{ needs.prepare.outputs.environment }}"
+          echo "GitHub Environment: stg"
           echo "Azione: ${{ needs.prepare.outputs.action }}"
           echo "Tag: $GITHUB_REF_NAME"
           echo "Resource Group: ${{ vars.AZURE_RESOURCE_GROUP }}"
@@ -67,7 +74,7 @@ jobs:
           echo "Storage Replication: ${{ vars.STORAGE_REPLICATION }}"
 
       - name: Azure login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -75,6 +82,7 @@ jobs:
 
       - name: What-If Storage Account
         if: ${{ needs.prepare.outputs.action == 'what' }}
+        shell: bash
         run: |
           az deployment group what-if \
             --name "${{ vars.DEPLOYMENT_NAME }}" \
@@ -85,6 +93,7 @@ jobs:
 
       - name: Create Storage Account
         if: ${{ needs.prepare.outputs.action == 'create' }}
+        shell: bash
         run: |
           az deployment group create \
             --name "${{ vars.DEPLOYMENT_NAME }}" \
