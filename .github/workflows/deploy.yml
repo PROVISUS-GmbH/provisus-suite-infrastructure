@@ -80,16 +80,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: What-If Storage Account
+          - name: What-If Storage Account
         if: ${{ needs.prepare.outputs.action == 'what' }}
         shell: bash
         run: |
           az deployment group what-if \
-            --name "${{ vars.DEPLOYMENT_NAME }}" \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "deploy-storage-dev-test-001" \
+            --resource-group "rg-provisus-stg2-nit-001" \
             --template-file bicep/main.bicep \
-            --parameters storageAccountName="${{ vars.STORAGE_ACCOUNT_NAME }}" \
-            --parameters skuName="${{ vars.STORAGE_REPLICATION }}"
+            --parameters storageAccountName="stprovmatteotest001" \
+            --parameters skuName="Standard_LRS"
 
       - name: Create Storage Account
         if: ${{ needs.prepare.outputs.action == 'create' }}
