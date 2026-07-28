@@ -80,7 +80,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-          - name: What-If Storage Account
+      - name: What-If Storage Account
         if: ${{ needs.prepare.outputs.action == 'what' }}
         shell: bash
         run: |
