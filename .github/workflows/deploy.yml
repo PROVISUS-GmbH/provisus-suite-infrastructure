@@ -70,8 +70,10 @@ jobs:
           echo "Tag: $GITHUB_REF_NAME"
           echo "Resource Group: ${{ vars.AZURE_RESOURCE_GROUP }}"
           echo "Deployment Name: ${{ vars.DEPLOYMENT_NAME }}"
-          echo "Storage Account Name: ${{ vars.STORAGE_ACCOUNT_NAME }}"
-          echo "Storage Replication: ${{ vars.STORAGE_REPLICATION }}"
+          echo "Env Code: ${{ vars.ENV_CODE }}"
+          echo "Client Name: ${{ vars.CLIENT_NAME }}"
+          echo "Key Vault Name: ${{ vars.KEY_VAULT_NAME }}"
+          echo "App Config Name: ${{ vars.APP_CONFIG_NAME }}"
 
       - name: Azure login
         uses: azure/login@v3
@@ -80,18 +82,22 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: What-If Storage Account
+      - name: What-If Deployment
         if: ${{ needs.prepare.outputs.action == 'what' }}
         shell: bash
         run: |
           az deployment group what-if \
-            --name "deploy-storage-dev-test-001" \
-            --resource-group "rg-provisus-stg2-nit-001" \
+            --name "${{ vars.DEPLOYMENT_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file bicep/main.bicep \
-            --parameters storageAccountName="stprovmatteotest001" \
-            --parameters skuName="Standard_LRS"
+            --parameters envCode="${{ vars.ENV_CODE }}" \
+            --parameters clientName="${{ vars.CLIENT_NAME }}" \
+            --parameters keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
+            --parameters appConfigName="${{ vars.APP_CONFIG_NAME }}" \
+            --parameters dbAdminPassword="${{ secrets.AZURE_DB_ADMIN_PASSWORD }}" \
+            --parameters appUserPassword="${{ secrets.AZURE_APP_USER_PASSWORD }}"
 
-      - name: Create Storage Account
+      - name: Create Resources (DB -> Storage -> KeyVault secrets -> App Config)
         if: ${{ needs.prepare.outputs.action == 'create' }}
         shell: bash
         run: |
@@ -99,5 +105,9 @@ jobs:
             --name "${{ vars.DEPLOYMENT_NAME }}" \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file bicep/main.bicep \
-            --parameters storageAccountName="${{ vars.STORAGE_ACCOUNT_NAME }}" \
-            --parameters skuName="${{ vars.STORAGE_REPLICATION }}"
+            --parameters envCode="${{ vars.ENV_CODE }}" \
+            --parameters clientName="${{ vars.CLIENT_NAME }}" \
+            --parameters keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
+            --parameters appConfigName="${{ vars.APP_CONFIG_NAME }}" \
+            --parameters dbAdminPassword="${{ secrets.AZURE_DB_ADMIN_PASSWORD }}" \
+            --parameters appUserPassword="${{ secrets.AZURE_APP_USER_PASSWORD }}"
