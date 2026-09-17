@@ -8,11 +8,11 @@ param keyVaultName string
 @description('Codice cliente, es. ago23 (stesso valore passato a clientName in storageAccount.bicep)')
 param clientName string
 
-@description('Nome del secret nel Key Vault con la password dell\'utente applicativo (creato come app-user-password in secretValue.bicep)')
-param appUserPasswordSecretName string = 'app-user-password'
+@description('Nome del secret nel Key Vault con la password dell\'utente applicativo (creato in secretValue.bicep)')
+param appUserPasswordSecretName string = 'database-${clientName}-password'
 
-@description('Nome del secret nel Key Vault con la password dell\'utente migrator/admin (creato come db-admin-password in secretValue.bicep)')
-param dbAdminPasswordSecretName string = 'db-admin-password'
+@description('Nome del secret nel Key Vault con la password dell\'utente migrator/admin (creato in secretValue.bicep)')
+param dbAdminPasswordSecretName string = 'database-${clientName}-migrator-password'
 
 resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' existing = {
   name: keyVaultName

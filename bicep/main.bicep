@@ -32,12 +32,6 @@ param charset string = 'UTF8'
 @description('Collation del database.')
 param collation string = 'en_US.utf8'
 
-@description('Nome del secret nel Key Vault con la password dell\'utente applicativo.')
-param appUserPasswordSecretName string = 'app-user-password'
-
-@description('Nome del secret nel Key Vault con la password dell\'utente migrator/admin.')
-param dbAdminPasswordSecretName string = 'db-admin-password'
-
 // 1. Database
 module database 'modules/postgresDatabase.bicep' = {
   name: 'deploy-database-${clientName}'
@@ -67,6 +61,7 @@ module secrets 'modules/secretValue.bicep' = {
   name: 'deploy-secrets-${clientName}'
   params: {
     keyVaultName: keyVaultName
+    clientName: clientName
     dbAdminPassword: dbAdminPassword
     appUserPassword: appUserPassword
   }
@@ -82,8 +77,6 @@ module appConfiguration 'modules/appConfiguration.bicep' = {
     appConfigName: appConfigName
     keyVaultName: keyVaultName
     clientName: clientName
-    appUserPasswordSecretName: appUserPasswordSecretName
-    dbAdminPasswordSecretName: dbAdminPasswordSecretName
   }
   dependsOn: [
     secrets
